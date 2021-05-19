@@ -6,6 +6,7 @@ import org.jsoup.select.Elements;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Queue;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class PageParser implements Runnable {
     private final int MAX_DOC = 3000;
@@ -13,6 +14,8 @@ public class PageParser implements Runnable {
     private static int doc_count = 0;
     private Queue<String> vertexs;
     private Map<String, Boolean> vis;
+    private ReentrantLock lock = new ReentrantLock();
+
 
     public PageParser(Map<String, Boolean> vis, Queue<String> vertexs) {
         db = new DatabaseQueryManager();
@@ -21,12 +24,25 @@ public class PageParser implements Runnable {
     }
 
     public void run() {
-        while (!vertexs.isEmpty() && doc_count <= MAX_DOC) {
-            String url = vertexs.remove();
-            try {
-                getUrlContent(url);
-            } catch (IOException e) {
-                e.printStackTrace();
+        while (doc_count <= MAX_DOC) {
+            lock.lock();
+            if (!vertexs.isEmpty() && doc_count <= MAX_DOC) {
+                String url = vertexs.remove();
+                lock.unlock();
+                try {
+                    getUrlContent(url);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            else {
+                lock.unlock();
+                try {
+                    Thread.sleep(1000);
+                }
+                catch (Exception e) {
+                    System.out.println(e);
+                }
             }
         }
     }
@@ -56,13 +72,15 @@ public class PageParser implements Runnable {
                 doc.select("html").first().attr("lang").equals("")) {
             // insert data to SQL database
             SiteInfo siteInfo = new SiteInfo(url, content);
-            doc_count++;
             db.insert(siteInfo);
+            doc_count++;
         }
         // fetching all urls then recursive call
         Elements links = doc.select("a[href]");
-        for (Element link : links) {
-            vertexs.add(link.attr("abs:href"));
+        if(vertexs.size() < MAX_DOC) {
+            for (Element link : links) {
+                vertexs.add(link.attr("abs:href"));
+            }
         }
     }
 }
