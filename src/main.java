@@ -8,7 +8,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 public class main {
 
     public static void main(String[] args)  {
-       RunIddexing();
+        RunIddexing();
     }
 
     public static void RunCrawler() throws InterruptedException {

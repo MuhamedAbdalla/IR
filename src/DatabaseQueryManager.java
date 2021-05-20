@@ -33,31 +33,14 @@ public class DatabaseQueryManager {
             if(connection == null) {
                 connection = DriverManager.getConnection(url);
             }
-            String query = "INSERT INTO term (term, doc_id, freq)"
-                    + "VALUES (?, ?, 1) ";
+
+            String query = "SELECT id, freq FROM term WHERE term=? AND doc_id=?";
             PreparedStatement parameter = connection.prepareStatement(query);
             parameter.setString(1, term);
             parameter.setInt(2, docId);
-            int row = parameter.executeUpdate();
+            ResultSet rs = parameter.executeQuery();
             int term_id;
-
-            if (row > 0) {
-                query = "SELECT id FROM term WHERE term=? AND doc_id=?";
-                parameter = connection.prepareStatement(query);
-                parameter.setString(1, term);
-                parameter.setInt(2, docId);
-                ResultSet rs = parameter.executeQuery();
-                rs.next();
-                term_id = rs.getInt(1);
-                rs.close();
-            }
-            else {
-                query = "SELECT id, freq FROM term WHERE term=? AND doc_id=?";
-                parameter = connection.prepareStatement(query);
-                parameter.setString(1, term);
-                parameter.setInt(2, docId);
-                ResultSet rs = parameter.executeQuery();
-                rs.next();
+            if(rs.next()) {
                 term_id = rs.getInt(1);
                 int freq = rs.getInt(2) + 1;
                 rs.close();
@@ -68,6 +51,22 @@ public class DatabaseQueryManager {
                 parameter.setInt(3, docId);
                 parameter.executeUpdate();
             }
+            else {
+                query = "INSERT INTO term (term, doc_id, freq)"
+                        + "VALUES (?, ?, 1) ";
+                parameter = connection.prepareStatement(query);
+                parameter.setString(1, term);
+                parameter.setInt(2, docId);
+                parameter.executeUpdate();
+
+                query = "SELECT id FROM term WHERE term=? AND doc_id=?";
+                parameter = connection.prepareStatement(query);
+                parameter.setString(1, term);
+                parameter.setInt(2, docId);
+                rs = parameter.executeQuery();
+                rs.next();
+                term_id = rs.getInt(1);
+            }
 
 
             query = "INSERT INTO term_pos (term_id, pos)"
@@ -75,11 +74,8 @@ public class DatabaseQueryManager {
             parameter = connection.prepareStatement(query);
             parameter.setInt(1, term_id);
             parameter.setInt(2, pos);
-            row = parameter.executeUpdate();
-
-            if(row > 0) {
-                return true;
-            }
+            parameter.executeUpdate();
+            return true;
         }
         catch (Exception exception) {
             exception.printStackTrace();

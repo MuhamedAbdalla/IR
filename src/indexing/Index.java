@@ -6,7 +6,7 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 
 public class Index {
-    private static String REGEX_TOKEN = "\\W"; // non alphanumeric
+    private static String REGEX_TOKEN = "[\\W_]"; // non alphanumeric
     private static String[] ENGLISH_STOPWORDS;
     private String[] tokens;
     private String[] tokensWithStopWords;
