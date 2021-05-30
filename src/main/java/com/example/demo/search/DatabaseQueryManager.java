@@ -1,16 +1,21 @@
 package com.example.demo.search;
 
+import com.example.demo.search.Helpers.Helpers;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 
 public class DatabaseQueryManager {
 
     private static final String url = "jdbc:sqlserver://DESKTOP-75A2EL9\\SQLEXPRESS:1433;databaseName=Clawer;integratedSecurity=true;";
     private static Connection connection;
+    private static HashMap<String, HashSet<String>> tokenHash = null;
+
 
     public static boolean insert(SiteInfo siteInfo) {
         try {
@@ -170,6 +175,97 @@ public class DatabaseQueryManager {
             }
             return docs;
 
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public static String[] getPureTokensStartsWith(String pattern) {
+        try {
+            if(connection == null) {
+                connection = DriverManager.getConnection(url);
+            }
+            String query = "SELECT term FROM term_no_stemming  WHERE term LIKE ?;";
+            PreparedStatement parameter = connection.prepareStatement(query);
+            parameter.setString(1, pattern + "%");
+            ResultSet rs = parameter.executeQuery();
+            ArrayList<String> tokens = new ArrayList<>();
+            while (rs.next()) {
+                String token = rs.getString(1);
+                tokens.add(token);
+            }
+            return tokens.toArray(String[]::new);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public static String[] getPureTokensEndsWith(String pattern) {
+        try {
+            if(connection == null) {
+                connection = DriverManager.getConnection(url);
+            }
+            String query = "SELECT term FROM term_no_stemming  WHERE term LIKE ?;";
+            PreparedStatement parameter = connection.prepareStatement(query);
+            parameter.setString(1, "%" + pattern);
+            ResultSet rs = parameter.executeQuery();
+            ArrayList<String> tokens = new ArrayList<>();
+            while (rs.next()) {
+                String token = rs.getString(1);
+                tokens.add(token);
+            }
+            return tokens.toArray(String[]::new);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public static String[] getPureTokensContains(String pattern) {
+        try {
+            if(connection == null) {
+                connection = DriverManager.getConnection(url);
+            }
+            String query = "SELECT term FROM term_no_stemming  WHERE term LIKE ?;";
+            PreparedStatement parameter = connection.prepareStatement(query);
+            parameter.setString(1, "%" + pattern + "%");
+            ResultSet rs = parameter.executeQuery();
+            ArrayList<String> tokens = new ArrayList<>();
+            while (rs.next()) {
+                String token = rs.getString(1);
+                tokens.add(token);
+            }
+            return tokens.toArray(String[]::new);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public static HashMap<String, HashSet<String>> getAllTermsWithNoStemming() {
+        try {
+            if(connection == null) {
+                connection = DriverManager.getConnection(url);
+            }
+            if(tokenHash != null) {
+                return tokenHash;
+            }
+            String query = "SELECT term FROM term_no_stemming;";
+            PreparedStatement parameter = connection.prepareStatement(query);
+            ResultSet rs = parameter.executeQuery();
+            tokenHash = new HashMap<>();
+            while (rs.next()) {
+                String token = rs.getString(1);
+                var hash = Helpers.applySoundex(token);
+                tokenHash.computeIfAbsent(hash, s -> new HashSet<>()).add(token);
+            }
+            return tokenHash;
         }
         catch (Exception e) {
             e.printStackTrace();

@@ -1,14 +1,12 @@
 package com.example.demo.search;
 
 import com.example.demo.search.Helpers.Helpers;
+import com.example.demo.search.Helpers.Pair;
 import com.example.demo.search.indexing.Index;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.Queue;
-import java.util.Scanner;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
@@ -70,23 +68,72 @@ public class searchController {
 
         DatabaseQueryManager.closeConnection();
     }
-    public static SiteInfo[] Search(String searchTerm) {
+
+    private static void getAllCompinations(String[] terms, HashMap<String, HashSet<String>> hashWords, ArrayList<String> container, int limit, int idx, ArrayList<String> res) {
+        if(idx == terms.length) {
+            container.add(String.join(" ", res));
+            return;
+        }
+        if(hashWords.containsKey(terms[idx])) {
+            for(var str: hashWords.get(terms[idx])) {
+                if(container.size() == limit) {
+                    break;
+                }
+                res.add(str);
+                getAllCompinations(terms,hashWords,container, limit, idx + 1, res);
+                res.remove(res.size() - 1);
+            }
+        }
+        else {
+            getAllCompinations(terms,hashWords,container, limit, idx + 1, res);
+        }
+    }
+
+    private static HashMap<String, Pair<SiteInfo, Integer>> getDocsThatMatch(String searchTerm) {
+        HashMap<String, Pair<SiteInfo, Integer>> res = new HashMap<>();
         if(searchTerm.startsWith("\"") && searchTerm.endsWith("\"")) {
             searchTerm = searchTerm.substring(1, searchTerm.length() - 1);
+            searchTerm = String.join(" ", Arrays.stream(searchTerm.split(" ")).
+                    map(s -> Helpers.applyKGram(s)).toArray(String[]::new));
             Index termIndex = new Index(searchTerm);
             var docsTokens = DatabaseQueryManager.getTokens(termIndex.GetTokens());
             var docsIdContainsSearchTerm = Helpers.getExactDocs(docsTokens, termIndex.GetTokens());
             var docs = DatabaseQueryManager.getDocsById(docsIdContainsSearchTerm);
-            return docs.toArray(SiteInfo[]::new);
+            docs.forEach(siteInfo -> res.computeIfAbsent(String.valueOf(siteInfo.getId()), s -> new Pair<>(siteInfo, 0)));
         }
         else {
+            searchTerm = String.join(" ", Arrays.stream(searchTerm.split(" ")).
+                    map(s -> Helpers.applyKGram(s)).toArray(String[]::new));
             Index termIndex = new Index(searchTerm);
             var docsTokens = DatabaseQueryManager.getTokens(termIndex.GetTokens());
             var docsIdContainsSearchTerm = Helpers.getMostRelevantDocs(docsTokens, termIndex.GetTokens());
-            var docs = DatabaseQueryManager.getDocsById(docsIdContainsSearchTerm);
-            return docs.toArray(SiteInfo[]::new);
+            var docs = DatabaseQueryManager.getDocsById(docsIdContainsSearchTerm.keySet().toArray(String[]::new));
+            docs.forEach(siteInfo -> res.computeIfAbsent(String.valueOf(siteInfo.getId()), s -> new Pair<>(siteInfo, docsIdContainsSearchTerm.get(String.valueOf(siteInfo.getId())))));
         }
+        return res;
     }
+
+    public static SiteInfo[] Search(String term) {
+        boolean exact = term.startsWith("\"") && term.endsWith("\"");
+        var terms = term.toLowerCase().split(" ");
+        var hashWords =  DatabaseQueryManager.getAllTermsWithNoStemming();
+        ArrayList<String> searchTerms = new ArrayList<>();
+        var termshash = Arrays.stream(terms).map(s -> Helpers.applySoundex(s)).toArray(String[]::new);
+        getAllCompinations(termshash, hashWords, searchTerms, 10000, 0, new ArrayList<>());
+        HashMap<String, Pair<SiteInfo, Integer>> docs = new HashMap<>();
+        for(var searchTerm: searchTerms) {
+           var tempDocs = getDocsThatMatch(searchTerm);
+           tempDocs.forEach((s, siteInfoIntegerPair) -> {
+               docs.computeIfAbsent(s, s1 -> new Pair<>(siteInfoIntegerPair.getFirst(), 0));
+               docs.get(s).setSecond(docs.get(s).getSecond() + siteInfoIntegerPair.getSecond());
+           });
+        }
+        ArrayList<SiteInfo> res = new ArrayList<>();
+        docs.forEach((s, siteInfoIntegerPair) -> res.add(siteInfoIntegerPair.getFirst()));
+        res.sort((o1, o2) -> docs.get(String.valueOf(o1.getId())).getSecond() - docs.get(String.valueOf(o2.getId())).getSecond());
+        return res.toArray(SiteInfo[]::new);
+    }
+
     @GetMapping
     public String index(@RequestParam(value = "search", defaultValue = "World") String search){
         String upperView = "<!DOCTYPE html>\n" +
