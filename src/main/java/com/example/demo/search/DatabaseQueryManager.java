@@ -9,7 +9,7 @@ import java.util.HashMap;
 
 public class DatabaseQueryManager {
 
-    private static final String url = "jdbc:sqlserver://DESKTOP-PVBOS8R\\SQLEXPRESS02:1433;databaseName=clawer;integratedSecurity=true;";
+    private static final String url = "jdbc:sqlserver://DESKTOP-75A2EL9\\SQLEXPRESS:1433;databaseName=Clawer;integratedSecurity=true;";
     private static Connection connection;
 
     public static boolean insert(SiteInfo siteInfo) {
@@ -54,7 +54,7 @@ public class DatabaseQueryManager {
                 parameter = connection.prepareStatement(query);
                 parameter.setInt(1, freq);
                 parameter.setString(2, term);
-                parameter.setInt(3, docId);
+                parameter.setInt((int)3, docId);
                 parameter.executeUpdate();
             }
             else {
@@ -119,7 +119,11 @@ public class DatabaseQueryManager {
             if(connection == null) {
                 connection = DriverManager.getConnection(url);
             }
-            String query = "SELECT id, url, content from document where id in (" + "?, ".repeat(ids.length) + ");";
+            String query = "SELECT id, url, content from document where id in (" + "?,".repeat(ids.length) + ");";
+            if (ids.length == 0) {
+                return new ArrayList<>();
+            }
+            query = query.substring(0, query.length() - 3) + ");";
             PreparedStatement parameter = connection.prepareStatement(query);
             for(int i = 0; i < ids.length; i++) {
                 parameter.setString(i + 1, ids[i]);
@@ -148,6 +152,10 @@ public class DatabaseQueryManager {
             }
             String query = "SELECT doc_id, pos, term FROM term INNER JOIN term_pos ON id = term_id WHERE term IN (" +
                     "?,".repeat(tokens.length) + ");";
+            if (tokens.length == 0) {
+                return new HashMap<>();
+            }
+            query = query.substring(0, query.length() - 3) + ");";
             PreparedStatement parameter = connection.prepareStatement(query);
             for(var i = 0; i < tokens.length; i++) {
                 parameter.setString(i + 1, tokens[i]);

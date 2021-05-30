@@ -30,8 +30,7 @@ public class H5aSearchApplication {
 	}
 
 	@GetMapping
-	public String search() {
-
+	public String search() throws InterruptedException {
 		return view;
 	}
 
@@ -39,14 +38,13 @@ public class H5aSearchApplication {
 		Map<String, Boolean> vis = new ConcurrentHashMap<>();
 		Queue<String> vertexs = new ConcurrentLinkedDeque<>();
 		Scanner scanner = new Scanner(System.in);
-		System.out.println("Enter number of site you want to start with");
-		int numOfSites = scanner.nextInt();
-		for (int i = 0; i < numOfSites; i++) {
-			vertexs.add(scanner.next());
-		}
-
-		System.out.println("Enter Number of Thread you want to use");
-		int numOfThreads = scanner.nextInt();
+		int numOfSites = 5;
+		vertexs.add("https://www.reddit.com");
+		vertexs.add("https://www.quora.com");
+		vertexs.add("https://www.wikipedia.org");
+		vertexs.add("https://www.bbc.com/news");
+		vertexs.add("https://edition.cnn.com");
+		int numOfThreads = 50;
 		ArrayList<Thread> threads = new ArrayList<>();
 		for (int i = 0; i < numOfThreads; i++) {
 			PageParser bfsObj = new PageParser(vis, vertexs);
