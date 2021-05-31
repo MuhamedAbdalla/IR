@@ -6,22 +6,21 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 
 public class Index {
-    private static String REGEX_TOKEN = "[\\W_]"; // non alphanumeric
+    private static String REGEX_TOKEN = "[\\W]"; // non alphanumeric
     private static String[] ENGLISH_STOPWORDS;
-    private String[] tokens;
-    private String[] tokensWithStopWords;
+    private String[] tokens, tokensBeforeStemming;
     public Index(String str) {
         try {
-            ENGLISH_STOPWORDS = new String(Files.readAllBytes(Paths.get("src/indexing/english-stopwords.txt").toAbsolutePath())).split("\n");
+            ENGLISH_STOPWORDS = new String(Files.readAllBytes(Paths.get("src/main/java/com/example/demo/search/indexing/english-stopwords.txt").toAbsolutePath())).split("\n");
         }catch (Exception exc) {
             System.out.println(exc);
             ENGLISH_STOPWORDS = new String[0];
         }
 
-        tokensWithStopWords = Tokenize(str);
-        tokensWithStopWords = CaseFolding(tokensWithStopWords); // TODO: save these tokens
-        tokens = RemoveStopwords(tokensWithStopWords);
-        tokens = Stem(tokens);
+        tokens = Tokenize(str);
+        tokens = CaseFolding(tokens); // TODO: save these tokens
+        tokensBeforeStemming = RemoveStopwords(tokens);
+        tokens = Stem(tokensBeforeStemming);
     }
 
     private static void debug(String[] str) {
@@ -54,7 +53,7 @@ public class Index {
         return tokens;
     }
 
-    public String[] GetTokensWithStopWords() {
-        return tokensWithStopWords;
+    public String[] GetTokensBeforeStemming() {
+        return tokensBeforeStemming;
     }
 }

@@ -64,6 +64,12 @@ public class searchController {
                     DatabaseQueryManager.insertIntoTerms(tokens[j], docs.get(i).getId(), j);
                 }
             }
+            tokens = indices.get(i).GetTokensBeforeStemming();
+            for(int j = 0; j < tokens.length; j++) {
+                if(!tokens[j].isEmpty()) {
+                    DatabaseQueryManager.insertIntoTermNotStemming(tokens[j], docs.get(i).getId());
+                }
+            }
         }
 
         DatabaseQueryManager.closeConnection();
@@ -115,13 +121,19 @@ public class searchController {
 
     public static SiteInfo[] Search(String term) {
         boolean exact = term.startsWith("\"") && term.endsWith("\"");
+        if (exact) {
+            term = term.substring(1, term.length() - 1);
+        }
         var terms = term.toLowerCase().split(" ");
         var hashWords =  DatabaseQueryManager.getAllTermsWithNoStemming();
         ArrayList<String> searchTerms = new ArrayList<>();
         var termshash = Arrays.stream(terms).map(s -> Helpers.applySoundex(s)).toArray(String[]::new);
-        getAllCompinations(termshash, hashWords, searchTerms, 10000, 0, new ArrayList<>());
+        getAllCompinations(termshash, hashWords, searchTerms, 10, 0, new ArrayList<>());
         HashMap<String, Pair<SiteInfo, Integer>> docs = new HashMap<>();
         for(var searchTerm: searchTerms) {
+            if (exact) {
+                searchTerm = "\"" + searchTerm + "\"";
+            }
            var tempDocs = getDocsThatMatch(searchTerm);
            tempDocs.forEach((s, siteInfoIntegerPair) -> {
                docs.computeIfAbsent(s, s1 -> new Pair<>(siteInfoIntegerPair.getFirst(), 0));
@@ -140,6 +152,13 @@ public class searchController {
                 "<html>\n" +
                 "<head>\n" +
                 "    <link rel=\"stylesheet\" href=\"https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css\">\n" +
+                "<style> .text {\n" +
+                "   overflow: hidden;\n" +
+                "   text-overflow: ellipsis;\n" +
+                "   display: -webkit-box;\n" +
+                "   -webkit-line-clamp: 4; \n" +
+                "   -webkit-box-orient: vertical;\n" +
+                "} </style>" +
                 "</head>\n" +
                 "<body>\n" +
                 "\n" +
@@ -165,7 +184,7 @@ public class searchController {
                 "    <div class=\"url\">\n" +
                 "        <a href=\"" + url + "\">" + url + "</a>\n" +
                 "    </div>\n" +
-                "    <div class=\"content\">\n" +
+                "    <div class=\"content text\">\n" +
                 "        " + content + "\n" +
                 "    </div>\n" +
                 "</div></li>\n";

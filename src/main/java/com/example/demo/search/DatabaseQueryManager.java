@@ -226,6 +226,29 @@ public class DatabaseQueryManager {
         }
     }
 
+    public static boolean insertIntoTermNotStemming(String term, int docId) {
+        try {
+            if(connection == null) {
+                connection = DriverManager.getConnection(url);
+            }
+
+            var query = "INSERT INTO term_no_stemming (term, doc_id)"
+                    + "VALUES (?, ?)";
+            var parameter = connection.prepareStatement(query);
+            parameter.setString(1, term);
+            parameter.setInt(2, docId);
+            parameter.executeUpdate();
+            return true;
+        }
+        catch (Exception exception) {
+            exception.printStackTrace();
+            System.exit(0);
+        }
+        return false;
+
+    }
+
+
     public static String[] getPureTokensContains(String pattern) {
         try {
             if(connection == null) {

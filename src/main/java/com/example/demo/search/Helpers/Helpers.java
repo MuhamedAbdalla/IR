@@ -165,7 +165,7 @@ public class Helpers {
 
     public static String applyKGram(String word, int k) {
         ArrayList<String> kGrams = new ArrayList<>();
-        for(int i = 0; i < word.length(); i++) {
+        for(int i = 0; i < word.length() - k + 1; i++) {
             kGrams.add(word.substring(i, i + k));
         }
         HashMap<String, Integer> wordCount = new HashMap<String, Integer>();
